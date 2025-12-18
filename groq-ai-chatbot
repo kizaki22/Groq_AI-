@@ -1,0 +1,53 @@
+import { generateText } from "ai";
+import { groq } from "@ai-sdk/groq";
+
+export const maxDuration = 30;
+
+export async function POST(req: Request) {
+  try {
+    const { messages } = await req.json();
+
+    // Get the real current date and time (updates every time someone chats)
+    const now = new Date();
+    const currentDateTime = now.toLocaleString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      timeZoneName: "short",
+    });
+    // Example: "Thursday, December 18, 2025, 3:45:32 PM UTC"
+
+    // Add a system message with the current date/time so the AI always knows it
+    const messagesWithSystem = [
+      {
+        role: "system",
+        content: `You are a helpful, friendly, and accurate assistant.
+The current date and time is ${currentDateTime}.
+Always use this exact date and time when asked about today, the date, the day of the week, the time, or any current events.
+Do not guess or use old knowledge.`,
+      },
+      ...messages,
+    ];
+
+    // Use Groq with a fast, smart model (you can change the model name if you want)
+    const { text } = await generateText({
+      model: groq("llama-3.3-70b-versatile"), // Great balance of speed & intelligence
+      // Alternative options you can use instead:
+      // "llama3-70b-8192"
+      // "mixtral-8x7b-32768"
+      messages: messagesWithSystem,
+    });
+
+    return Response.json({ message: text });
+  } catch (error) {
+    console.error("API Error:", error);
+    return Response.json(
+      { error: "Failed to generate response" },
+      { status: 500 }
+    );
+  }
+}
